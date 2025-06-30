@@ -1,0 +1,25 @@
+[project]
+name = "matrx-connect"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { email = "jatin.b.rx3@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115.14",
+    "matrx-utils",
+    "python-socketio>=5.13.0",
+    "supabase>=2.16.0",
+]
+
+[project.scripts]
+matrx-connect = "matrx_connect:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+matrx-utils = { git = "https://github.com/armanisadeghi/matrx-utils.git" }
