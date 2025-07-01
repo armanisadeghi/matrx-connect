@@ -274,9 +274,8 @@ class TaskQueue:
                             service_factory = self.user_sessions.user_service_factories.get(task.user_id)
                         else:
                             if not self.system_service_factory:
-                                from common.socket.core.service_factory import ServiceFactory
-
-                                self.system_service_factory = ServiceFactory()
+                                from matrx_connect import get_app_factory
+                                self.system_service_factory = get_app_factory()
                             service_factory = self.system_service_factory
 
                         if not service_factory:

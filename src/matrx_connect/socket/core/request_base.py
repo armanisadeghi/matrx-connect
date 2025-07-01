@@ -1,7 +1,7 @@
 from matrx_connect import sio
 from matrx_utils import vcprint
 from matrx_connect.socket.response import SocketEmitter
-from common.socket.schema.schema_processor import ValidationSystem
+from matrx_connect.socket.schema import ValidationSystem
 
 verbose = True
 debug = False

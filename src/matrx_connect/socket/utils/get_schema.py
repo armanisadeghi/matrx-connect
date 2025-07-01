@@ -82,36 +82,68 @@ SCHEMA = {
             "ICON_NAME": "Link", "TEST_VALUE": None
         },
         "scrape_include_media_description": {
-            "REQUIRED": False, "DEFAULT": True, "VALIDATION": None, "DATA_TYPE": "boolean", "CONVERSION": None,
+            "REQUIRED": False, 
+            "DEFAULT": True, 
+            "VALIDATION": None, 
+            "DATA_TYPE": "boolean", 
+            "CONVERSION": None,
             "REFERENCE": None,
             "COMPONENT": "Switch", "COMPONENT_PROPS": {},
             "DESCRIPTION": "Include media description (media caption etc.) in text. Triggers when include_media is turned on.",
-            "ICON_NAME": "WholeWord", "TEST_VALUE": None
+            "ICON_NAME": "WholeWord", 
+            "TEST_VALUE": None
         },
         "scrape_include_anchors": {
-            "REQUIRED": False, "DEFAULT": True, "VALIDATION": None, "DATA_TYPE": "boolean", "CONVERSION": None,
+            "REQUIRED": False, 
+            "DEFAULT": True, 
+            "VALIDATION": None, 
+            "DATA_TYPE": "boolean", 
+            "CONVERSION": None,
             "REFERENCE": None,
-            "COMPONENT": "Switch", "COMPONENT_PROPS": {}, "DESCRIPTION": "Include hyperlinks in scraped text",
-            "ICON_NAME": "ExternalLink", "TEST_VALUE": None
+            "COMPONENT": "Switch", 
+            "COMPONENT_PROPS": {}, 
+            "DESCRIPTION": "Include hyperlinks in scraped text",
+            "ICON_NAME": "ExternalLink", 
+            "TEST_VALUE": None
         },
         "scrape_anchor_size": {
-            "REQUIRED": False, "DEFAULT": 100, "VALIDATION": None, "DATA_TYPE": "integer", "CONVERSION": None,
+            "REQUIRED": False, 
+            "DEFAULT": 100, 
+            "VALIDATION": None, 
+            "DATA_TYPE": "integer", 
+            "CONVERSION": None,
             "REFERENCE": None,
-            "COMPONENT": "NumberInput", "COMPONENT_PROPS": {"min": 10, "max": 500},
+            "COMPONENT": "NumberInput", 
+            "COMPONENT_PROPS": {"min": 10, "max": 500},
             "DESCRIPTION": "Size of hyperlinks in scraped text",
-            "ICON_NAME": "Ruler", "TEST_VALUE": None
+            "ICON_NAME": "Ruler", 
+            "TEST_VALUE": None
         },
         "search_keywords_array": {
-            "REQUIRED": True, "DEFAULT": None, "VALIDATION": None, "DATA_TYPE": "array", "CONVERSION": None,
+            "REQUIRED": True, 
+            "DEFAULT": None, 
+            "VALIDATION": None, 
+            "DATA_TYPE": "array", 
+            "CONVERSION": None,
             "REFERENCE": None,
-            "COMPONENT": "ArrayField", "COMPONENT_PROPS": {}, "DESCRIPTION": "Enter the queries to search for.",
-            "ICON_NAME": "WholeWord", "TEST_VALUE": None
+            "COMPONENT": "ArrayField", 
+            "COMPONENT_PROPS": {}, 
+            "DESCRIPTION": "Enter the queries to search for.",
+            "ICON_NAME": "WholeWord", 
+            "TEST_VALUE": None
         },
         "search_keyword_string": {
-            "REQUIRED": True, "DEFAULT": None, "VALIDATION": None, "DATA_TYPE": "string", "CONVERSION": None,
+            "REQUIRED": True, 
+            "DEFAULT": None, 
+            "VALIDATION": None, 
+            "DATA_TYPE": "string", 
+            "CONVERSION": None,
             "REFERENCE": None,
-            "COMPONENT": "input", "COMPONENT_PROPS": {}, "DESCRIPTION": "Enter query to search and get results for.",
-            "ICON_NAME": "WholeWord", "TEST_VALUE": None
+            "COMPONENT": "input", 
+            "COMPONENT_PROPS": {}, 
+            "DESCRIPTION": "Enter query to search and get results for.",
+            "ICON_NAME": 
+            "WholeWord", "TEST_VALUE": None
         },
         "search_country_code": {
             "REQUIRED": False, "DEFAULT": "all", "VALIDATION": None, "DATA_TYPE": "string", "CONVERSION": None,
@@ -178,9 +210,15 @@ SCHEMA = {
         },
         "MIC_CHECK_DEFINITION": {  # Assuming MIC_CHECK is treated as a global definition structure
             "mic_check_message": {
-                "REQUIRED": False, "DEFAULT": "", "VALIDATION": None, "DATA_TYPE": "string", "CONVERSION": None,
+                "REQUIRED": False, 
+                "DEFAULT": "", 
+                "VALIDATION": None, 
+                "DATA_TYPE": "string", 
+                "CONVERSION": None,
                 "REFERENCE": None,
-                "COMPONENT": "input", "COMPONENT_PROPS": {}, "ICON_NAME": "Check",
+                "COMPONENT": "input", 
+                "COMPONENT_PROPS": {}, 
+                "ICON_NAME": "Check",
                 "DESCRIPTION": "Enter any message and the same message will be streamed back to you as a test of the mic.",
                 "TEST_VALUE": None
             }
