@@ -11,7 +11,4 @@ clients = {}
 verbose = False
 
 
-from matrx_connect.socket.core.initialize_handlers import initialize_socketio_handlers
-
-
-initialize_socketio_handlers()
+from .core.global_socket_events import *

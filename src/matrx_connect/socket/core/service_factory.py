@@ -1,5 +1,5 @@
 import asyncio
-from matrx_connect.socket.response import SocketRequestBase
+from matrx_connect.socket.core import SocketRequestBase
 from matrx_utils import vcprint
 
 

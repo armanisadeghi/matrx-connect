@@ -2,9 +2,11 @@ from datetime import datetime, timedelta
 import importlib
 import logging
 import uuid
-from matrx_connect import sio, get_user_session_namespace, clients
 from matrx_utils import vcprint
-from matrx_connect import Task, get_task_queue
+
+from ..app import sio, clients
+from ..core.user_sessions import get_user_session_namespace
+from ...core.task_queue import Task, get_task_queue
 
 user_sessions = get_user_session_namespace()
 
