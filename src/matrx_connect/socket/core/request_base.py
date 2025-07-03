@@ -1,7 +1,8 @@
-from ..app import sio
 from matrx_utils import vcprint
+
+from ..app import sio
 from ..response import SocketEmitter
-from ..schema import ValidationSystem
+from ..schema import get_schema_validator
 
 verbose = True
 debug = False
@@ -44,7 +45,7 @@ class SocketRequestBase:
         self.namespace = namespace
         self.event = event
         self.prepared_tasks = []
-        self.context_builder = ValidationSystem()
+        self.context_builder = get_schema_validator()
         self.namespace_handler = sio.namespace_handlers[namespace]
         self.session_manager = session_manager
         self.user_id = user_id
@@ -168,7 +169,7 @@ class SocketRequestBase:
         raise NotImplementedError
 
     async def get_service_instance(
-        self, service_class, sid, event, stream_handler=None
+            self, service_class, sid, event, stream_handler=None
     ):
         return await self.namespace_handler.get_service_instance(
             service_class=service_class,

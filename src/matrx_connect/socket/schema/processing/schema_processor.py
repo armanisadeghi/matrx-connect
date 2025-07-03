@@ -1,18 +1,18 @@
 from enum import Enum
 from typing import Any
-
-from matrx_connect.socket.schema.validations.validation_registry import (
-    CUSTOM_VALIDATIONS,
-    VALIDATION_REGISTRY,
-)
-from matrx_connect.socket.schema.validations.validation_system import validate_enum
-from matrx_connect.socket.schema.conversions.conversions_system import convert_value
-from matrx_utils import vcprint
-from matrx_connect.socket.utils.get_schema import get_schema
 from typing import Set, Dict, Optional
 import copy
 
+from matrx_utils import vcprint
 
+from ..validations.validation_registry import (
+    VALIDATION_REGISTRY,
+)
+from ..validations.validation_functions import (
+    validate_enum
+)
+from ..conversions.conversions_system import convert_value
+from ....exceptions import SocketSchemaError
 
 STANDARD_FIELD_DEFINITIONS = {
     "user_id": {
@@ -41,18 +41,15 @@ STANDARD_FIELD_DEFINITIONS = {
     },
 }
 
+_schema_validator = None
 
-class SocketSchemaError(ValueError):
-    """Custom exception for schema-related errors."""
-    pass
 
 class ValidationSystem:
     """Validates data against a loaded JSON schema at runtime, validating the schema itself first."""
 
     def __init__(self, schema: Dict[str, Any]):
-        """Loads and validates the schema structure."""
         if not isinstance(schema, dict):
-             raise SocketSchemaError("Invalid schema format. Input must be a dictionary.")
+            raise SocketSchemaError("Invalid schema format. Input must be a dictionary.")
 
         self.schema = schema
         self.definitions = self.schema.get("definitions")
@@ -70,18 +67,18 @@ class ValidationSystem:
         """Performs structural validation of the loaded schema."""
         # --- 1. Validate Definitions Structure and References ---
         for def_key, definition in self.definitions.items():
-            is_field = not all(type(k)==dict for k,v in definition.items())
+            is_field = not all(type(k) == dict for k, v in definition.items())
             path = f"definitions/{def_key}"
             if not isinstance(definition, dict):
-                 raise SocketSchemaError(f"Invalid definition at '{path}'. Expected an object.")
+                raise SocketSchemaError(f"Invalid definition at '{path}'. Expected an object.")
 
             # Check if it's a named group (contains fields which are dicts) or a single field definition
             is_named_group = all(isinstance(v, dict) for v in definition.values())
 
             if is_named_group:
-                self._validate_definition_group(definition, path, set()) # Start cycle check here
+                self._validate_definition_group(definition, path, set())  # Start cycle check here
             else:
-                 self._validate_single_field_def(definition, path) # Validate single field def structure
+                self._validate_single_field_def(definition, path)  # Validate single field def structure
 
         # --- 2. Validate Tasks Structure and References ---
         for service_name, service_tasks in self.tasks.items():
@@ -92,20 +89,22 @@ class ValidationSystem:
             for task_name, task_definition in service_tasks.items():
                 task_path = f"{service_path}/{task_name}"
                 if not isinstance(task_definition, dict):
-                     raise SocketSchemaError(f"Invalid task definition at '{task_path}'. Expected an object.")
+                    raise SocketSchemaError(f"Invalid task definition at '{task_path}'. Expected an object.")
 
                 if "$ref" in task_definition:
                     if len(task_definition) > 1:
-                         raise SocketSchemaError(f"Task definition at '{task_path}' with $ref cannot have other properties.")
+                        raise SocketSchemaError(
+                            f"Task definition at '{task_path}' with $ref cannot have other properties.")
                     ref_path = task_definition["$ref"]
                     # Task ref must point to a named group (object definition)
-                    resolved_def = self._resolve_and_validate_ref(ref_path, task_path, allow_single_field=False, visited=set())
+                    resolved_def = self._resolve_and_validate_ref(ref_path, task_path, allow_single_field=False,
+                                                                  visited=set())
                     # Basic cycle check for task refs pointing to themselves
-                    if ref_path.replace("definitions/","") == task_name.upper(): # Simplified check
-                         pass # Allow referencing a global def with same name, deeper cycle check handles real issues
+                    if ref_path.replace("definitions/", "") == task_name.upper():  # Simplified check
+                        pass  # Allow referencing a global def with same name, deeper cycle check handles real issues
                 else:
                     # Validate fields within the task definition
-                    self._validate_definition_group(task_definition, task_path, set()) # Start cycle check here
+                    self._validate_definition_group(task_definition, task_path, set())  # Start cycle check here
 
     def _validate_definition_group(self, definition_obj: Dict, current_path: str, visited: Set[str]):
         """Validates fields within a named group (from definitions) or task definition. Handles cycles."""
@@ -113,11 +112,12 @@ class ValidationSystem:
         # Use a canonical path for visited check (e.g., always start with definitions/ or tasks/)
         canonical_path = current_path
         if not (canonical_path.startswith("definitions/") or canonical_path.startswith("tasks/")):
-             # This case shouldn't happen with correct initial calls, but safety check
-             raise SocketSchemaError(f"Internal Error: Invalid path format for cycle check: {current_path}")
+            # This case shouldn't happen with correct initial calls, but safety check
+            raise SocketSchemaError(f"Internal Error: Invalid path format for cycle check: {current_path}")
 
         if canonical_path in visited:
-            raise SocketSchemaError(f"Circular reference detected involving '{canonical_path}'. Path: {' -> '.join(list(visited)) + ' -> ' + canonical_path}")
+            raise SocketSchemaError(
+                f"Circular reference detected involving '{canonical_path}'. Path: {' -> '.join(list(visited)) + ' -> ' + canonical_path}")
         visited.add(canonical_path)
 
         # --- End Cycle Detection ---
@@ -129,10 +129,12 @@ class ValidationSystem:
             # --- Determine field type and validate accordingly ---
             if "$ref" in rules:
                 # Field uses $ref
-                if len(rules) > 1: pass # Allow overrides
+                if len(rules) > 1:
+                    pass
                 ref_path = rules["$ref"]
                 # Field ref can point to single field or named group
-                resolved_ref = self._resolve_and_validate_ref(ref_path, field_path, allow_single_field=True, visited=visited)
+                resolved_ref = self._resolve_and_validate_ref(ref_path, field_path, allow_single_field=True,
+                                                              visited=visited)
                 # If resolved ref is a named group, recurse for cycle check
                 if isinstance(resolved_ref, dict) and all(isinstance(v, dict) for v in resolved_ref.values()):
                     self._validate_definition_group(resolved_ref, ref_path, visited.copy())
@@ -141,10 +143,11 @@ class ValidationSystem:
                 # Field uses REFERENCE
                 ref_name = rules["REFERENCE"]
                 if not isinstance(ref_name, str):
-                     raise SocketSchemaError(f"Invalid REFERENCE value at '{field_path}'. Expected a string name.")
+                    raise SocketSchemaError(f"Invalid REFERENCE value at '{field_path}'. Expected a string name.")
                 ref_path = f"definitions/{ref_name}"
                 # REFERENCE must point to a named group
-                resolved_ref = self._resolve_and_validate_ref(ref_path, field_path, allow_single_field=False, visited=visited)
+                resolved_ref = self._resolve_and_validate_ref(ref_path, field_path, allow_single_field=False,
+                                                              visited=visited)
                 # Recurse for cycle check into the referenced named group
                 self._validate_definition_group(resolved_ref, ref_path, visited.copy())
                 # We don't call _validate_single_field_def here because the structure of this field
@@ -154,11 +157,11 @@ class ValidationSystem:
                 # Inline field definition (no $ref, no REFERENCE)
                 self._validate_single_field_def(rules, field_path)
 
-        visited.remove(canonical_path) # Backtrack for cycle detection
+        visited.remove(canonical_path)  # Backtrack for cycle detection
 
     def _validate_single_field_def(self, rules: Dict, path: str):
         # Check for required properties
-        required_props = ["COMPONENT", "DATA_TYPE"]
+        required_props = ["COMPONENT", "DATA_TYPE", "ICON_NAME", "CONVERSION"]
         for prop in required_props:
             if prop not in rules:
                 raise SocketSchemaError(f"Missing required property '{prop}' in inline field definition at '{path}'.")
@@ -175,7 +178,8 @@ class ValidationSystem:
             raise SocketSchemaError(
                 f"$ref property is invalid in an inline field definition at '{path}'. It should be the only key if used.")
 
-    def _resolve_and_validate_ref(self, ref_path: str, current_path: str, allow_single_field: bool, visited: Set[str]) -> Dict:
+    def _resolve_and_validate_ref(self, ref_path: str, current_path: str, allow_single_field: bool,
+                                  visited: Set[str]) -> Dict:
         """Resolves a $ref or REFERENCE path, performs basic validation, and checks for immediate cycles."""
         resolved_def = None
         is_definition_ref = False
@@ -189,31 +193,36 @@ class ValidationSystem:
             raise SocketSchemaError(f"Reference '{ref_path}' at '{current_path}' could not be resolved.")
 
         if not isinstance(resolved_def, dict):
-             raise SocketSchemaError(f"Reference '{ref_path}' at '{current_path}' resolved to an invalid type ({type(resolved_def).__name__}). Expected object.")
+            raise SocketSchemaError(
+                f"Reference '{ref_path}' at '{current_path}' resolved to an invalid type ({type(resolved_def).__name__}). Expected object.")
 
         # Determine if the resolved definition represents a named group or a single field
         # A named group has dictionary values for its keys (the fields)
         is_named_group = any(isinstance(v, dict) for v in resolved_def.values())
 
         if not allow_single_field and not is_named_group:
-             raise SocketSchemaError(f"Reference '{ref_path}' at '{current_path}' must point to an object definition (named group), but points to a single field definition.")
+            raise SocketSchemaError(
+                f"Reference '{ref_path}' at '{current_path}' must point to an object definition (named group), but points to a single field definition.")
 
         # --- Cycle Check during resolution ---
         # Check if the target we are resolving to is already in our current path
-        target_path = ref_path # Use the reference path itself for cycle check
+        target_path = ref_path  # Use the reference path itself for cycle check
         if target_path in visited:
-             raise SocketSchemaError(f"Circular reference detected involving '{target_path}'. Path: {' -> '.join(list(visited)) + ' -> ' + target_path}")
+            raise SocketSchemaError(
+                f"Circular reference detected involving '{target_path}'. Path: {' -> '.join(list(visited)) + ' -> ' + target_path}")
         # --- End Cycle Check ---
 
         return resolved_def
 
     def get_definition(self, ref_path: str) -> Optional[Dict[str, Any]]:
-        if not isinstance(ref_path, str) or not ref_path.startswith("definitions/"): return None
+        if not isinstance(ref_path, str) or not ref_path.startswith("definitions/"):
+            return None
         key = ref_path.split('/', 1)[1]
         return self.definitions.get(key)
 
     def get_task_definition(self, event: str, task: str) -> Optional[Dict[str, Any]]:
-        service_name = event.upper(); task_name = task.upper()
+        service_name = event.upper()
+        task_name = task.upper()
         return self.tasks.get(service_name, {}).get(task_name)
 
     def validate(self, data: Dict[str, Any], event: str, task: str, user_id: str):
@@ -250,9 +259,10 @@ class ValidationSystem:
         except SocketSchemaError as e:
             validation_result["errors"]["_schema"] = str(e)
         except Exception as e:
-            vcprint(f"Unexpected Validation Error for {event}.{task}: {e}", color="error")
+            vcprint(f"Unexpected Validation Error for {event}.{task}: {e}", color="red")
             import traceback
-            traceback.print_exc()
+            vcprint(traceback.format_exc(), color="red")
+
             validation_result["errors"]["_internal"] = f"Internal validation error: {type(e).__name__}"
 
         return validation_result
@@ -308,17 +318,19 @@ class ValidationSystem:
                                 list_errors[f"[{idx}]"] = nested_result["errors"]
                             processed_list.append(nested_result["data"])
                         else:
-                            list_errors[f"[{idx}]"] = f"Expected object for reference '{reference}', got {type(item).__name__}"
+                            list_errors[
+                                f"[{idx}]"] = f"Expected object for reference '{reference}', got {type(item).__name__}"
                     if list_errors:
                         errors[field] = list_errors
                     converted_value = processed_list
                 else:
-                    field_errors.append(f"Data type mismatch for reference '{reference}'. Expected object or array, got {type(converted_value).__name__}")
+                    field_errors.append(
+                        f"Data type mismatch for reference '{reference}'. Expected object or array, got {type(converted_value).__name__}")
 
             if not field_errors and validation_rule and converted_value is not None:
                 validator, msg = None, None
-                if validation_rule in CUSTOM_VALIDATIONS: validator = CUSTOM_VALIDATIONS[validation_rule]
-                elif validation_rule in VALIDATION_REGISTRY: validator = VALIDATION_REGISTRY[validation_rule]
+                if validation_rule in VALIDATION_REGISTRY:
+                    validator = VALIDATION_REGISTRY[validation_rule]
                 if validator:
                     try:
                         if isinstance(validator, type) and issubclass(validator, Enum):
@@ -340,10 +352,11 @@ class ValidationSystem:
         return {"data": structured_data, "errors": errors}
 
 
-VALIDATOR = None
-def get_validator():
-    global VALIDATOR
-    if VALIDATOR is not None:
-        return VALIDATOR
-    VALIDATOR = ValidationSystem(get_schema())
-    return VALIDATOR
+def get_schema_validator(schema):
+    global _schema_validator
+
+    if _schema_validator is not None:
+        return _schema_validator
+
+    _schema_validator = ValidationSystem(schema)
+    return _schema_validator
