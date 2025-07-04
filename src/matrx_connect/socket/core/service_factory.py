@@ -1,6 +1,7 @@
 import asyncio
 from matrx_connect.socket.core import SocketRequestBase
 from matrx_utils import vcprint
+import traceback
 
 
 class ServiceFactory:
@@ -128,14 +129,12 @@ class ServiceFactory:
                         tasks.append(task)
 
                     except Exception as e:
-                        import traceback
                         print(f"Error setting up service task: {str(e)}")
                         traceback.print_exc()
 
                 try:
-                    await asyncio.gather(*tasks, return_exceptions=True)
+                    results = await asyncio.gather(*tasks, return_exceptions=True)
                 except Exception as e:
-                    import traceback
                     print(f"Error during task execution: {str(e)}")
                     traceback.print_exc()
 
@@ -145,7 +144,6 @@ class ServiceFactory:
                         if hasattr(instance, "cleanup"):
                             await instance.cleanup()
                     except Exception as e:
-                        import traceback
                         print(f"Error during instance cleanup: {str(e)}")
                         traceback.print_exc()
                     finally:
@@ -154,10 +152,54 @@ class ServiceFactory:
             return self.create_service(service_name)
 
         except Exception as e:
-            import traceback
             print(f"Error in process_request: {str(e)}")
             traceback.print_exc()
             try:
                 return self.create_service(service_name)
             except Exception:
                 return None
+
+    async def process_single_request(self, sid, user_id, data, namespace, service_name):
+
+        request = SocketRequestBase(
+            sid, data, namespace, service_name, user_id,
+            session_manager=None
+        )
+
+        response = await request.validate_single_request(data)
+        stream_handler = response["stream_handler"]
+        task_name = response["task"]
+        validation_result = response["validation_result"]
+
+        response = await stream_handler.get_accumulated_results()
+        if response["error"]:
+            return response
+
+        force_new = service_name in self.multi_instance_services
+        service_instance = self.create_service(service_name, force_new=force_new)
+
+        service_instance.add_stream_handler(stream_handler)
+        service_instance.set_user_id(user_id)
+
+        try:
+            await service_instance.process_task(
+                task_name, validation_result.get("context")
+            )
+
+            return await stream_handler.get_accumulated_results()
+        except Exception as e:
+            error = {
+                "error_type": "task_execution_error",
+                "message": "An error occurred while executing task. See Details.",
+                "user_visible_message": "Your request was invalid. Please try again.",
+                "details": {"error": str(e), "traceback": traceback.format_exc()},
+            }
+            await stream_handler.fatal_error(**error)
+            print(f"Error during single task execution: {str(e)}")
+            traceback.print_exc()
+
+            return await stream_handler.get_accumulated_results()
+
+
+
+

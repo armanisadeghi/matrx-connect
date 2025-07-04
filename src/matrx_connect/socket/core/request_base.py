@@ -1,4 +1,4 @@
-from matrx_utils import vcprint
+from matrx_utils import vcprint, settings
 
 from ..app import sio
 from ..response import SocketEmitter
@@ -50,6 +50,45 @@ class SocketRequestBase:
         self.session_manager = session_manager
         self.user_id = user_id
 
+        self._set_event_name()
+
+    def _set_event_name(self):
+        primary_service_name = settings.APP_PRIMARY_SERVICE_NAME
+        if self.event == "default_service" and primary_service_name:
+            self.event = primary_service_name
+
+    async def validate_single_request(self, obj):
+        task, index, stream, task_data, errors = validate_object_structure(obj)
+
+        result = self.context_builder.validate(
+            task_data, self.event, task, self.user_id
+        )
+
+        vcprint(result, title="[validate_and_get_single] Validation Result", color="gold")
+
+        stream_handler = SocketEmitter(
+            event_name="api-request", sid=self.sid, namespace=self.namespace, accumulate_responses=True
+        )
+
+        errors = result.get("errors")
+
+        if errors is not None and errors:
+            vcprint(errors, title="[validate_and_get_single] Validation Errors", color="red")
+            error_object = {
+                "error_type": "validation_error",
+                "message": "SocketRequestBase found errors during task validation. See Details.",
+                "user_visible_message": "Your request was invalid. Please try again.",
+                "details": errors,
+            }
+            await stream_handler.fatal_error(**error_object)
+
+        return {
+            "validation_result": result,
+            "stream_handler": stream_handler,
+            "task": task
+        }
+
+
     async def initialize(self):
         """Set up basic request validation and stream handlers for all tasks"""
         try:
@@ -59,6 +98,7 @@ class SocketRequestBase:
                 )
 
             all_successful = True
+
 
             for obj in self.data:
                 task, index, stream, task_data, errors = validate_object_structure(obj)

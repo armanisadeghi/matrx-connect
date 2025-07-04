@@ -18,13 +18,24 @@ class SocketResponse:
         sid: str,
         namespace: str = "/UserSession",
         debug: bool = False,
+        accumulate_responses = False
     ):
         self.event_name = event_name
         self.sid = sid
         self.namespace = namespace
         self._sio = sio
         self.debug = local_debug or debug
-        self._initialize()
+        self.accumulate_responses = accumulate_responses
+        self.accumulated_responses = {
+            "text": "",
+            "data": [],
+            "info": [],
+            "error": [],
+            "broker": [],
+        }
+
+        if not self.accumulate_responses:
+            self._initialize()
 
     def _initialize(self):
         try:
@@ -52,6 +63,10 @@ class SocketResponse:
             raise RuntimeError(f"Failed to initialize SocketResponse: {str(e)}") from e
 
     async def _send_chunk(self, chunk):
+        if self.accumulate_responses:
+            self.accumulated_responses["text"] += chunk
+            return
+
         try:
             await self._sio.emit(
                 self.event_name, chunk, to=self.sid, namespace=self.namespace
@@ -61,6 +76,10 @@ class SocketResponse:
             raise RuntimeError(f"Failed to send chunk: {str(e)}") from e
 
     async def _send_data(self, data):
+        if self.accumulate_responses:
+            self.accumulated_responses["data"].append(data)
+            return
+
         try:
             response = {"data": self._serialize(data)}
             await self._sio.emit(
@@ -72,6 +91,10 @@ class SocketResponse:
             raise RuntimeError(f"Failed to send data: {str(e)}") from e
 
     async def _send_info(self, info_object):
+        if self.accumulate_responses:
+            self.accumulated_responses["info"].append(info_object)
+            return
+
         try:
             response = {"info": info_object}
             await self._sio.emit(
@@ -83,6 +106,10 @@ class SocketResponse:
             raise RuntimeError(f"Failed to send info: {str(e)}") from e
 
     async def _send_broker(self, broker_object: BrokerResponse):
+        if self.accumulate_responses:
+            self.accumulated_responses["broker"].append(broker_object)
+            return
+
         try:
             response = {"broker": broker_object}
             await self._sio.emit(
@@ -96,6 +123,10 @@ class SocketResponse:
             raise RuntimeError(f"Failed to send broker: {str(e)}") from e
 
     async def _send_error(self, error_object):
+        if self.accumulate_responses:
+            self.accumulated_responses["error"].append(error_object)
+            return
+
         try:
             response = {"error": error_object}
             await self._sio.emit(
@@ -107,6 +138,9 @@ class SocketResponse:
             raise RuntimeError(f"Failed to send error: {str(e)}") from e
 
     async def _send_end(self):
+        if self.accumulate_responses:
+            return
+
         try:
             response = {"end": True}
             await self._sio.emit(

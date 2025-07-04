@@ -1,22 +1,29 @@
 import logging
 import time
 from contextlib import asynccontextmanager
-from typing import List
-from fastapi import FastAPI
-from matrx_utils import vcprint
-from matrx_connect import get_task_queue
 from typing import Callable
+
+from fastapi import FastAPI
+from matrx_utils import vcprint, settings
+from typing import Dict, Any, Optional
+
+from pydantic import BaseModel
+from .api_executor import execute
+
+
+from matrx_connect import get_task_queue
 
 logger = logging.getLogger('app')
 
+_fast_api_app = None
 
-def create_app(app_name, app_description, app_version, startup: Callable=None, shutdown: Callable =None, mount_apps: List[tuple[str, FastAPI]]= None) -> FastAPI:
+
+def create_app(app_name, app_description, app_version, startup: Callable = None, shutdown: Callable = None) -> FastAPI:
     """Create and configure the FastAPI application"""
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        
-        
+
         task_queue = get_task_queue()
         logger.info("[Matrx Connect] Task Queue Initialized.")
         vcprint("[Matrx Connect] All Core Services Starting...", color="green")
@@ -40,8 +47,6 @@ def create_app(app_name, app_description, app_version, startup: Callable=None, s
                 vcprint(e, "Shutdown method failed", color="red")
                 logger.error("Shutdown method failed.")
 
-            
-
     main_app = FastAPI(
         title=app_name,
         version=app_version,
@@ -50,11 +55,6 @@ def create_app(app_name, app_description, app_version, startup: Callable=None, s
         redoc_url=None,
         lifespan=lifespan
     )
-
-    if mount_apps:
-        for path, app in mount_apps:
-            main_app.mount(path, app)
-
 
     @main_app.get("/", include_in_schema=False)
     async def root():
@@ -84,5 +84,33 @@ def create_app(app_name, app_description, app_version, startup: Callable=None, s
             logger.error(f"Request failed: {method} {path} - Error: {str(e)}", exc_info=True)
             raise
 
-
     return main_app
+
+
+def get_app(app_name=None, app_description=None, app_version=None, startup: Callable = None, shutdown: Callable = None):
+    global _fast_api_app
+    if not _fast_api_app:
+        _fast_api_app = create_app(app_name=app_name, app_description=app_description, app_version=app_version,
+                                   startup=startup, shutdown=shutdown)
+        return _fast_api_app
+
+    return _fast_api_app
+
+
+app = get_app(settings.APP_NAME, settings.APP_DESCRIPTION, settings.APP_VERSION)
+
+
+class TaskPayload(BaseModel):
+    taskName: str
+    taskData: Optional[Dict[str, Any]] = {}
+
+
+@app.post("/execute_task/{service_name}")
+async def dynamic_endpoint(
+        service_name: str,
+        payload: TaskPayload
+):
+
+    task_data = {"taskName": payload.taskName, "taskData": payload.taskData}
+
+    return await execute(service_name, task_data)
