@@ -9,6 +9,8 @@ from typing import Dict, Any, Optional
 
 from pydantic import BaseModel
 from .api_executor import execute
+from ..socket.schema import get_runtime_schema
+
 
 
 from matrx_connect import get_task_queue
@@ -114,3 +116,20 @@ async def dynamic_endpoint(
     task_data = {"taskName": payload.taskName, "taskData": payload.taskData}
 
     return await execute(service_name, task_data)
+
+
+@app.get("/schema")
+async def app_schema():
+    try:
+        schema = get_runtime_schema()
+        return {
+            "success": True,
+            "message": None,
+            "response": schema
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Runtime error occurred: {e}",
+            "response": None
+        }

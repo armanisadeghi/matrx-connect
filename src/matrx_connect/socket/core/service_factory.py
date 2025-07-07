@@ -1,7 +1,9 @@
 import asyncio
-from matrx_connect.socket.core import SocketRequestBase
-from matrx_utils import vcprint
 import traceback
+
+from matrx_utils import vcprint
+
+from matrx_connect.socket.core import SocketRequestBase
 
 
 class ServiceFactory:
@@ -13,7 +15,7 @@ class ServiceFactory:
         self.register_default_services()
 
     def get_session_manager(self, sid: str, user_id: str, org_id: str = None,
-                           client_id: str = None, project_id: str = None):
+                            client_id: str = None, project_id: str = None):
         """Enhanced session manager creation with optional scope context"""
         return self.global_broker_system.get_session_manager(
             sid, user_id, org_id, client_id, project_id
@@ -40,6 +42,9 @@ class ServiceFactory:
 
     def register_service(self, service_name, service_class):
         self.services[service_name] = service_class
+
+    def list_registered_service(self):
+        return list(self.services.keys())
 
     def register_multi_instance_service(self, service_name, service_class):
         self.services[service_name] = service_class
@@ -199,7 +204,3 @@ class ServiceFactory:
             traceback.print_exc()
 
             return await stream_handler.get_accumulated_results()
-
-
-
-

@@ -239,7 +239,7 @@ class ValidationSystem:
         # Proceed with validation
         try:
             initial_task_def = self.get_task_definition(event, task)
-            if not initial_task_def:
+            if initial_task_def is None:
                 raise SocketSchemaError(f"Task definition '{event}.{task}' not found.")
 
             definition_to_validate = initial_task_def
@@ -360,3 +360,10 @@ def get_schema_validator(schema):
 
     _schema_validator = ValidationSystem(schema)
     return _schema_validator
+
+
+def get_runtime_schema():
+    global _schema_validator
+
+    if _schema_validator is not None:
+        return _schema_validator.schema
