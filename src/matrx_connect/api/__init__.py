@@ -1,18 +1,16 @@
 import logging
 import time
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, AsyncExitStack
 from typing import Callable
+from typing import Dict, Any, Optional
 
 from fastapi import FastAPI
 from matrx_utils import vcprint, settings
-from typing import Dict, Any, Optional
-
 from pydantic import BaseModel
+
 from .api_executor import execute
 from ..socket.schema import get_runtime_schema
-
-
-
+from ..mcp.server import mcp as mcp_bridge
 from matrx_connect import get_task_queue
 
 logger = logging.getLogger('app')
@@ -24,7 +22,7 @@ def create_app(app_name, app_description, app_version, startup: Callable = None,
     """Create and configure the FastAPI application"""
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI):
+    async def app_lifespan(app: FastAPI):
 
         task_queue = get_task_queue()
         logger.info("[Matrx Connect] Task Queue Initialized.")
@@ -49,20 +47,31 @@ def create_app(app_name, app_description, app_version, startup: Callable = None,
                 vcprint(e, "Shutdown method failed", color="red")
                 logger.error("Shutdown method failed.")
 
+    @asynccontextmanager
+    async def combined_lifespan(app: FastAPI):
+        async with AsyncExitStack() as stack:
+            await stack.enter_async_context(app_lifespan(app))
+            await stack.enter_async_context(mcp_bridge.session_manager.run())
+            yield
+
     main_app = FastAPI(
         title=app_name,
         version=app_version,
         description=app_description,
         docs_url=None,
         redoc_url=None,
-        lifespan=lifespan
+        lifespan=combined_lifespan
     )
+
+    main_app.mount(path="/mcp-server", app=mcp_bridge.streamable_http_app())
 
     @main_app.get("/", include_in_schema=False)
     async def root():
         return {
             "message": f"Welcome to {app_name} API",
             "version": app_version,
+            "mcp": "/mcp-server/mcp",
+            "schema": "/schema"
         }
 
     @main_app.middleware("http")
@@ -89,6 +98,7 @@ def create_app(app_name, app_description, app_version, startup: Callable = None,
     return main_app
 
 
+
 def get_app(app_name=None, app_description=None, app_version=None, startup: Callable = None, shutdown: Callable = None):
     global _fast_api_app
     if not _fast_api_app:
@@ -112,7 +122,6 @@ async def dynamic_endpoint(
         service_name: str,
         payload: TaskPayload
 ):
-
     task_data = {"taskName": payload.taskName, "taskData": payload.taskData}
 
     return await execute(service_name, task_data)
