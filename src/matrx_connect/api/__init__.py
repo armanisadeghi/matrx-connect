@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from .api_executor import execute
 from ..socket.schema import get_runtime_schema
-from ..mcp.server import mcp as mcp_bridge
+from ..mcp_server.http_server import mcp as mcp_bridge
 from matrx_connect import get_task_queue
 
 logger = logging.getLogger('app')
