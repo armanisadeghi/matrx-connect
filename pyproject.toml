@@ -13,6 +13,7 @@ dependencies = [
     "mcp[cli]>=1.11.0",
     "python-socketio",
     "supabase>=2.16.0",
+    "matrx-utils @ git+https://github.com/armanisadeghi/matrx-utils.git@v1.0.0"
 ]
 
 [project.scripts]
@@ -22,6 +23,5 @@ matrx-connect = "matrx_connect:main"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.uv.sources]
-matrx-utils = { git = "https://github.com/armanisadeghi/matrx-utils.git" }
-
+[tool.hatch.metadata]
+allow-direct-references = true
