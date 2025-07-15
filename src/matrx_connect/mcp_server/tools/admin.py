@@ -15,18 +15,23 @@ async def get_environment(args: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Dictionary with status and result/error information containing environment settings
     """
+    def _normalize_dict(obj): # Todo: Use centralized methods.
+        normalized = {}
+        for k, v in obj.items():
+            normalized[k] = str(v)
+        return normalized
+
     try:
         filter_ = args.get('filter')
 
         if not filter_:
-            return {"status": "success", "result": settings.list_settings_redacted()}
+            return {"status": "success", "result": _normalize_dict(settings.list_settings_redacted())}
         
         filtered_variables = {}
         for k, v in settings.list_settings_redacted().items():
             if str(filter_).lower() in str(k).lower():
-                filtered_variables[k] = str(v)
-
-        return {"status": "success", "result": filtered_variables}
+                filtered_variables[k] = v
+        return {"status": "success", "result": _normalize_dict(filtered_variables)}
     
     except Exception as e:
         error_traceback = traceback.format_exc()
