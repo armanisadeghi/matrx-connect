@@ -5,16 +5,16 @@ from typing import Callable
 from typing import Dict, Any, Optional
 
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
 from matrx_utils import vcprint, settings
 from pydantic import BaseModel
 
-from .api_executor import execute
 from ..socket.schema import get_runtime_schema
 from ..mcp_server.http_server import mcp as mcp_bridge
 from matrx_connect import get_task_queue
+from .http_executor import HTTPExecutor
 
 logger = logging.getLogger('app')
-
 _fast_api_app = None
 
 
@@ -98,7 +98,6 @@ def create_app(app_name, app_description, app_version, startup: Callable = None,
     return main_app
 
 
-
 def get_app(app_name=None, app_description=None, app_version=None, startup: Callable = None, shutdown: Callable = None):
     global _fast_api_app
     if not _fast_api_app:
@@ -117,14 +116,59 @@ class TaskPayload(BaseModel):
     taskData: Optional[Dict[str, Any]] = {}
 
 
-@app.post("/execute_task/{service_name}")
-async def dynamic_endpoint(
+@app.post("/execute-direct/{service_name}")
+async def execute_direct(
         service_name: str,
-        payload: TaskPayload
+        payload: TaskPayload,
 ):
-    task_data = {"taskName": payload.taskName, "taskData": payload.taskData}
+    """
+    Direct execution bypassing schema validation.
+    Updates taskData directly as service instance attributes.
 
-    return await execute(service_name, task_data)
+    Response streams in real-time with same format as socket responses.
+    """
+    headers = {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Cache-Control",
+    }
+    http_executor = HTTPExecutor()
+    return StreamingResponse(
+        http_executor.execute_direct(
+            service_name=service_name,
+            task_name=payload.taskName,
+            task_data=payload.taskData or {}
+        ),
+        media_type="text/event-stream",
+        headers=headers
+    )
+
+
+@app.post("/execute/{service_name}")
+async def execute_validated(
+        service_name: str,
+        payload: TaskPayload,
+):
+    headers = {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Cache-Control",
+    }
+    http_executor = HTTPExecutor()
+
+    return StreamingResponse(
+        http_executor.execute_validated(
+            service_name=service_name,
+            task_name=payload.taskName,
+            task_data=payload.taskData or {}
+        ),
+        media_type="text/event-stream",
+        headers=headers
+    )
 
 
 @app.get("/schema")
