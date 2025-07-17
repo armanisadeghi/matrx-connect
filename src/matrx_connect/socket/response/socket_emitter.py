@@ -12,9 +12,8 @@ class SocketEmitter(SocketResponse):
         sid: str,
         namespace: str = "/UserSession",
         debug: bool = False,
-        accumulate_responses: bool = False
     ):
-        super().__init__(event_name, sid, namespace, debug, accumulate_responses=accumulate_responses)
+        super().__init__(event_name, sid, namespace, debug)
 
     def print_sid(self, identifier="None Provided"):
         vcprint(
@@ -220,8 +219,3 @@ class SocketEmitter(SocketResponse):
                     f"All items must be BrokerResponse dataclass, found {type(broker).__name__}"
                 )
             await self._send_broker(broker.to_dict())
-
-    async def get_accumulated_results(self):
-        if not self.accumulate_responses:
-            raise RuntimeError("get_responses can only be called in accumulate mode")
-        return self.accumulated_responses

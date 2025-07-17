@@ -196,3 +196,9 @@ cython_debug/
 .idea/
 
 _dev/
+
+# Ignore all files in any temp directory and all subdirectories (unlimited depth)
+**/temp/**/*
+
+# But allow all directories in any temp folder and all subdirectories (unlimited depth)
+!**/temp/**/
